@@ -37,11 +37,11 @@ Pour répondre à cette problématique, je vais mettre en place les éléments s
 - un service DHCP pour l'attribution automatique des adresses IP ;
 - une ACL pour restreindre l'accès au serveur.
 
-Une fois la configuration terminée, plusieurs tests de connectivité viendront vérifier que le réseau fonctionne comme prévu et que les règles de sécurité sont bien respectées.
+Une fois la configuration terminée, plusieurs tests de connectivité viennent vérifier que le réseau fonctionne comme prévu et que les règles de sécurité sont respectées.
 
 ## 5. Topologie du réseau
 
-J'ai volontairement choisi une topologie simple, pour progresser étape par étape dans la compréhension du fonctionnement du réseau. Elle comprend :
+La topologie comprend :
 
 - 1 routeur ;
 - 1 switch ;
@@ -53,8 +53,6 @@ J'ai volontairement choisi une topologie simple, pour progresser étape par éta
 
 ## 6. Organisation des VLAN
 
-Trois VLAN sont utilisés pour séparer logiquement les différents éléments du réseau au sein du même switch :
-
 | VLAN | Nom | Utilisation |
 |------|-----|-------------|
 | 10 | INFORMATIQUE | Ordinateurs du service informatique |
@@ -63,12 +61,21 @@ Trois VLAN sont utilisés pour séparer logiquement les différents éléments d
 
 ## 7. Plan d'adressage IP
 
-Chaque VLAN dispose de son propre réseau IP, avec une passerelle dédiée :
-
 | VLAN | Réseau | Passerelle |
 |------|--------|------------|
 | VLAN 10 | 192.168.10.0/24 | 192.168.10.1 |
 | VLAN 20 | 192.168.20.0/24 | 192.168.20.1 |
 | VLAN 30 | 192.168.30.0/24 | 192.168.30.1 |
 
-Le serveur, quant à lui, conserve une adresse IP fixe : **192.168.30.10**
+Le serveur conserve une adresse IP fixe : **192.168.30.10**.
+
+## 8. Documentation
+
+- 📘 [Configuration réseau détaillée](documentation/configuration-reseau.md)
+- 🖼️ [Captures de configuration et de tests](screenshots/README.md)
+
+## 9. Résultat de sécurité
+
+L'ACL `ACL-SERVEUR` permet au **VLAN 10 – INFORMATIQUE** d'accéder à `192.168.30.10`, tout en bloquant l'accès au serveur depuis le **VLAN 20 – EMPLOYES**.
+
+Les tests réalisés dans Cisco Packet Tracer confirment le fonctionnement de cette politique de sécurité.

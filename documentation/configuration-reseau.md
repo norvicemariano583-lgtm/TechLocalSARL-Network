@@ -61,25 +61,17 @@ Le service DHCP est configuré directement sur R1.
 
 ### VLAN 10 – INFORMATIQUE
 
-Réseau :
+Réseau : `192.168.10.0/24`
 
-`192.168.10.0/24`
-
-Passerelle :
-
-`192.168.10.1`
+Passerelle : `192.168.10.1`
 
 Les adresses de `192.168.10.1` à `192.168.10.20` sont exclues du pool DHCP.
 
 ### VLAN 20 – EMPLOYES
 
-Réseau :
+Réseau : `192.168.20.0/24`
 
-`192.168.20.0/24`
-
-Passerelle :
-
-`192.168.20.1`
+Passerelle : `192.168.20.1`
 
 Les adresses de `192.168.20.1` à `192.168.20.20` sont exclues du pool DHCP.
 
@@ -154,6 +146,18 @@ La configuration de R1 a ensuite été sauvegardée avec `copy running-config st
 
 ---
 
-## 7. Prochaine étape
+## 7. Preuves visuelles
 
-La configuration réseau et le filtrage de l'accès au serveur sont maintenant fonctionnels. Les prochaines améliorations pourront porter sur la documentation des preuves de tests, puis sur d'éventuels services supplémentaires du serveur (DNS, HTTP, etc.) selon les objectifs du projet.
+Les captures de configuration et de tests sont regroupées dans le dossier [`screenshots/`](../screenshots/README.md) et classées chronologiquement.
+
+Les trois dernières captures documentent la mise en place de l'ACL et les tests de sécurité :
+
+- configuration et application de `ACL-SERVEUR` ;
+- PC0 (VLAN 20) : accès au serveur bloqué ;
+- PC4 (VLAN 10) : accès au serveur autorisé.
+
+---
+
+## 8. État du projet
+
+La segmentation VLAN, le trunk, le routage inter-VLAN, le DHCP et le filtrage ACL sont configurés et vérifiés dans Cisco Packet Tracer. La configuration de R1 est sauvegardée dans la mémoire de démarrage.
