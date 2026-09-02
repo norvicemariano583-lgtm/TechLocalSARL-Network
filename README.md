@@ -49,7 +49,7 @@ J'ai volontairement choisi une topologie simple, pour progresser étape par éta
 - 1 serveur ;
 - des imprimantes réparties entre les différents services.
 
-*(Le schéma de la topologie sera ajouté ici une fois la configuration terminée.)*
+![Topologie du réseau](topology.png)
 
 ## 6. Organisation des VLAN
 
