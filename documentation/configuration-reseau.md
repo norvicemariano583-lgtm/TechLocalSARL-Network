@@ -17,7 +17,7 @@ Les ports du switch ont ensuite été affectés au VLAN correspondant à chaque 
 ## 2. Affectation des ports
 
 | Port | Équipement | VLAN |
-|------|-------------|------|
+|------|------------|------|
 | Fa0/1 | PC0 | 20 |
 | Fa0/2 | PC1 | 20 |
 | Fa0/3 | PC2 | 20 |
@@ -94,8 +94,66 @@ Au moment de cette vérification, 8 baux DHCP étaient présents :
 
 ---
 
-## 6. Prochaine étape
+## 6. Configuration de l'ACL
 
-La prochaine étape du projet sera de configurer le serveur SRV01 avec une adresse IP statique, puis de réaliser les tests de connectivité.
+Une ACL étendue nommée `ACL-SERVEUR` a été mise en place sur R1 afin de contrôler l'accès au serveur `SRV01` (`192.168.30.10`).
 
-Une ACL sera ensuite mise en place afin d'autoriser le service informatique à accéder au serveur tout en bloquant l'accès depuis le VLAN des employés.
+Les règles appliquées sont :
+
+```cisco
+ip access-list extended ACL-SERVEUR
+ permit ip 192.168.10.0 0.0.0.255 host 192.168.30.10
+ deny ip 192.168.20.0 0.0.0.255 host 192.168.30.10
+ permit ip any any
+```
+
+L'ACL est appliquée en sortie sur la sous-interface du VLAN 30 :
+
+```cisco
+interface GigabitEthernet0/0/0.30
+ ip access-group ACL-SERVEUR out
+```
+
+Cette configuration permet au VLAN 10 (INFORMATIQUE) d'accéder au serveur tout en bloquant l'accès au serveur depuis le VLAN 20 (EMPLOYES). Le reste du trafic est autorisé grâce à la règle `permit ip any any`.
+
+### Vérification de l'application de l'ACL
+
+La commande suivante confirme que l'ACL est bien appliquée en sortie sur `G0/0/0.30` :
+
+```cisco
+show ip interface GigabitEthernet0/0/0.30
+```
+
+Résultat observé :
+
+```text
+Outgoing access list is ACL-SERVEUR
+Inbound  access list is not set
+```
+
+### Tests de sécurité
+
+Avant l'application de l'ACL, PC4 (VLAN 10) et PC0 (VLAN 20) pouvaient tous les deux joindre `192.168.30.10`.
+
+Après l'application de l'ACL :
+
+| Source | Destination | Résultat |
+|--------|-------------|----------|
+| PC4 – VLAN 10 | 192.168.30.10 | Autorisé – 0 % de perte |
+| PC0 – VLAN 20 | 192.168.30.10 | Bloqué – 100 % de perte |
+
+La commande `show access-lists ACL-SERVEUR` a également confirmé l'utilisation des règles :
+
+```text
+permit ip 192.168.10.0 0.0.0.255 host 192.168.30.10 (8 match(es))
+deny ip 192.168.20.0 0.0.0.255 host 192.168.30.10 (4 match(es))
+permit ip any any
+```
+
+La configuration de R1 a ensuite été sauvegardée avec `copy running-config startup-config`.
+
+---
+
+## 7. Prochaine étape
+
+La configuration réseau et le filtrage de l'accès au serveur sont maintenant fonctionnels. Les prochaines améliorations pourront porter sur la documentation des preuves de tests, puis sur d'éventuels services supplémentaires du serveur (DNS, HTTP, etc.) selon les objectifs du projet.
