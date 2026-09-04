@@ -2,22 +2,18 @@
 
 ## 1. Création des VLAN
 
-Pour séparer les différents services de l'entreprise, trois VLAN ont été créés sur le switch SW1.
+Trois VLAN ont été créés sur SW1 afin de séparer les services de l'entreprise.
 
 | VLAN | Nom | Utilisation |
-|------|-----|-------------|
+|---|---|---|
 | 10 | INFORMATIQUE | Service informatique |
 | 20 | EMPLOYES | Employés |
 | 30 | SERVEURS | Serveur interne |
 
-Les ports du switch ont ensuite été affectés au VLAN correspondant à chaque service.
-
----
-
 ## 2. Affectation des ports
 
 | Port | Équipement | VLAN |
-|------|------------|------|
+|---|---|---|
 | Fa0/1 | PC0 | 20 |
 | Fa0/2 | PC1 | 20 |
 | Fa0/3 | PC2 | 20 |
@@ -29,83 +25,39 @@ Les ports du switch ont ensuite été affectés au VLAN correspondant à chaque 
 | Fa0/24 | SRV01 | 30 |
 | Gi0/1 | R1 | Trunk |
 
----
+## 3. Trunk et routage inter-VLAN
 
-## 3. Trunk entre SW1 et R1
-
-Le port GigabitEthernet0/1 de SW1 est configuré en mode trunk.
-
-Ce trunk permet de transporter les VLAN 10, 20 et 30 entre le switch et le routeur R1.
-
-L'encapsulation utilisée est 802.1Q.
-
----
-
-## 4. Routage inter-VLAN
-
-Le routage inter-VLAN est réalisé sur le routeur R1 avec des sous-interfaces.
+SW1 et R1 sont reliés par un trunk 802.1Q sur `Gi0/1`. Le routage inter-VLAN est assuré par les sous-interfaces de R1.
 
 | Sous-interface | VLAN | Adresse IP |
-|----------------|------|------------|
-| G0/0/0.10 | 10 | 192.168.10.1 |
-| G0/0/0.20 | 20 | 192.168.20.1 |
-| G0/0/0.30 | 30 | 192.168.30.1 |
+|---|---:|---|
+| G0/0/0.10 | 10 | 192.168.10.1/24 |
+| G0/0/0.20 | 20 | 192.168.20.1/24 |
+| G0/0/0.30 | 30 | 192.168.30.1/24 |
 
-Ces adresses servent de passerelles par défaut pour les équipements de chaque réseau.
+## 4. DHCP
 
----
+Le DHCP est fourni par R1.
 
-## 5. Configuration DHCP
+- VLAN 10 : `192.168.10.0/24`, passerelle `192.168.10.1`, DNS `192.168.30.10`.
+- VLAN 20 : `192.168.20.0/24`, passerelle `192.168.20.1`, DNS `192.168.30.10`.
+- Les adresses `.1` à `.20` de chaque réseau sont exclues du DHCP.
 
-Le service DHCP est configuré directement sur R1.
+## 5. DNS
 
-### VLAN 10 – INFORMATIQUE
+`SRV01` possède l'adresse fixe `192.168.30.10`.
 
-Réseau : `192.168.10.0/24`
-
-Passerelle : `192.168.10.1`
-
-DNS distribué : `192.168.30.10`
-
-Les adresses de `192.168.10.1` à `192.168.10.20` sont exclues du pool DHCP.
-
-### VLAN 20 – EMPLOYES
-
-Réseau : `192.168.20.0/24`
-
-Passerelle : `192.168.20.1`
-
-DNS distribué : `192.168.30.10`
-
-Les adresses de `192.168.20.1` à `192.168.20.20` sont exclues du pool DHCP.
-
-### Vérification
-
-La commande `show ip dhcp binding` permet de vérifier les adresses actuellement attribuées.
-
-Les postes clients utilisent DHCP pour obtenir automatiquement leur adresse IP, leur passerelle et l'adresse du serveur DNS.
-
----
-
-## 6. Service DNS sur SRV01
-
-Le serveur `SRV01` utilise l'adresse IP fixe `192.168.30.10`.
-
-Le service DNS est activé sur le serveur et un enregistrement de type A a été créé :
+Le service DNS est activé avec l'enregistrement :
 
 | Nom | Type | Adresse |
-|-----|------|---------|
+|---|---|---|
 | `srv01.techlocal.local` | A | `192.168.30.10` |
 
-Les clients reçoivent `192.168.30.10` comme serveur DNS via DHCP.
+Les clients reçoivent l'adresse du DNS via DHCP.
 
----
+## 6. ACL-SERVEUR
 
-## 7. Configuration de l'ACL
-
-Une ACL étendue nommée `ACL-SERVEUR` a été mise en place sur R1 afin de contrôler l'accès au serveur `SRV01` (`192.168.30.10`).
-
-La configuration finale prend en compte le fonctionnement du DNS : le VLAN 20 peut interroger le serveur DNS, mais reste interdit d'accès direct au serveur pour les autres communications.
+Une ACL étendue contrôle l'accès au serveur. Le VLAN 20 peut utiliser le DNS mais ne peut pas accéder directement au serveur pour les autres communications. Le VLAN 10 conserve l'accès au serveur.
 
 ```cisco
 ip access-list extended ACL-SERVEUR
@@ -116,125 +68,99 @@ ip access-list extended ACL-SERVEUR
  permit ip any any
 ```
 
-L'ACL est appliquée en sortie sur la sous-interface du VLAN 30 :
+Application :
 
 ```cisco
 interface GigabitEthernet0/0/0.30
  ip access-group ACL-SERVEUR out
 ```
 
-Cette configuration permet :
+## 7. Vérifications et tests
 
-- au VLAN 10 (INFORMATIQUE) d'accéder au serveur ;
-- au VLAN 20 (EMPLOYES) d'utiliser le DNS du serveur ;
-- au VLAN 20 de ne pas accéder directement aux ressources du serveur ;
-- au reste du trafic de circuler conformément à la règle `permit ip any any`.
-
----
-
-## 8. Vérification de l'application de l'ACL
-
-La commande suivante confirme que l'ACL est bien appliquée en sortie sur `G0/0/0.30` :
+### ACL
 
 ```cisco
 show ip interface GigabitEthernet0/0/0.30
-```
-
-Résultat observé :
-
-```text
-Outgoing access list is ACL-SERVEUR
-Inbound access list is not set
-```
-
-La commande suivante permet également de contrôler les compteurs des différentes règles :
-
-```cisco
 show access-lists ACL-SERVEUR
 ```
 
----
+`G0/0/0.30` confirme que `ACL-SERVEUR` est appliquée en sortie.
 
-## 9. Tests de sécurité et de résolution DNS
+### PC0 – VLAN 20
 
-### PC0 – VLAN 20 EMPLOYES
+- `nslookup srv01.techlocal.local` : résolution réussie vers `192.168.30.10`.
+- `ping 192.168.30.10` : bloqué, 100 % de perte.
 
-Le test de connectivité directe vers le serveur est bloqué :
+### PC4 – VLAN 10
 
-```text
-ping 192.168.30.10
+- `ping 192.168.30.10` : réussi, 0 % de perte.
+- `ping srv01.techlocal.local` : résolution et communication réussies, 0 % de perte.
+
+## 8. Sécurisation de R1
+
+### Mode privilégié
+
+Un `enable secret` est configuré. `service password-encryption` est également activé.
+
+### Console
+
+La console est protégée par authentification et déconnexion automatique après 10 minutes d'inactivité :
+
+```cisco
+line console 0
+ password <mot-de-passe-console>
+ login
+ logging synchronous
+ exec-timeout 10 0
 ```
 
-Résultat : `100 %` de perte.
+### Accès VTY et SSH
 
-La résolution DNS fonctionne cependant :
+Les lignes VTY utilisent la base d'utilisateurs locale et acceptent uniquement SSH :
 
-```text
-nslookup srv01.techlocal.local
+```cisco
+username admin privilege 15 secret <secret-admin>
+
+line vty 0 4
+ login local
+ transport input ssh
+ exec-timeout 10 0
 ```
 
-Le serveur DNS `192.168.30.10` répond et retourne :
+SSH est activé en version 2 :
 
 ```text
-Name:    srv01.techlocal.local
-Address: 192.168.30.10
+SSH Enabled - version 2.0
 ```
 
-Le test démontre donc que le VLAN 20 peut utiliser le service DNS sans obtenir un accès direct au serveur.
+Un nom de domaine est configuré et des clés RSA sont utilisées pour SSH. Le compte `admin` possède le niveau de privilège 15.
 
-### PC4 – VLAN 10 INFORMATIQUE
+> **Sécurité :** les mots de passe et secrets réels ne sont pas publiés dans ce dépôt GitHub.
 
-Le poste informatique peut joindre directement le serveur :
+### Administration SSH locale
 
-```text
-ping 192.168.30.10
-```
+L'infrastructure reste entièrement locale. SSH permet néanmoins à un poste du LAN d'administrer R1 via son adresse IP de passerelle, sans connexion physique à la console. Telnet n'est pas autorisé.
 
-Résultat : `0 %` de perte.
+## 9. Sauvegarde de la configuration
 
-La résolution du nom fonctionne également et le ping suivant aboutit :
-
-```text
-ping srv01.techlocal.local
-```
-
-Résultat : `0 %` de perte.
-
-### Synthèse
-
-| Source | Destination | Résultat |
-|--------|-------------|----------|
-| PC0 – VLAN 20 | DNS `192.168.30.10` | Autorisé |
-| PC0 – VLAN 20 | Serveur `192.168.30.10` en ICMP | Bloqué – 100 % de perte |
-| PC4 – VLAN 10 | Serveur `192.168.30.10` en ICMP | Autorisé – 0 % de perte |
-| PC4 – VLAN 10 | `srv01.techlocal.local` | Autorisé – 0 % de perte |
-
-Ces tests valident le fonctionnement de la politique de filtrage mise en place par `ACL-SERVEUR`.
-
----
-
-## 10. Preuves visuelles
-
-Les captures de configuration et de tests sont regroupées dans le dossier [`screenshots/`](../screenshots/README.md) et classées chronologiquement.
-
-Elles documentent notamment :
-
-- la création et l'affectation des VLAN ;
-- la configuration et la vérification du trunk ;
-- le routage inter-VLAN ;
-- la configuration et les baux DHCP ;
-- la configuration de `ACL-SERVEUR` ;
-- le blocage de PC0 ;
-- l'autorisation de PC4.
-
----
-
-## 11. État du projet
-
-La segmentation VLAN, le trunk, le routage inter-VLAN, le DHCP, le DNS et le filtrage ACL sont configurés et vérifiés dans Cisco Packet Tracer.
-
-La configuration finale doit être sauvegardée dans la mémoire de démarrage de R1 avec :
+Après chaque modification importante de R1, la configuration doit être enregistrée :
 
 ```cisco
 copy running-config startup-config
 ```
+
+## 10. État du projet
+
+À ce stade, le projet comprend :
+
+- segmentation VLAN ;
+- trunk 802.1Q ;
+- routage inter-VLAN ;
+- DHCP ;
+- DNS ;
+- ACL de contrôle d'accès au serveur ;
+- sécurisation des accès administratifs de R1 ;
+- administration SSH locale ;
+- tests de connectivité, DNS et sécurité validés dans Cisco Packet Tracer.
+
+Les captures sont regroupées dans [`screenshots/`](../screenshots/README.md).
