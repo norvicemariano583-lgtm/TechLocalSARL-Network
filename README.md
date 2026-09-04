@@ -4,7 +4,7 @@
 
 Ce projet a été réalisé sur Cisco Packet Tracer dans le cadre de mon apprentissage de l'administration réseau. Il consiste à concevoir et configurer le réseau informatique d'une petite entreprise fictive, TechLocalSARL.
 
-À travers ce projet, je voulais mettre en pratique des notions fondamentales des réseaux d'entreprise : la segmentation en VLAN, le routage inter-VLAN, l'attribution automatique d'adresses via DHCP, et le filtrage du trafic avec des ACL.
+À travers ce projet, je mets en pratique des notions fondamentales des réseaux d'entreprise : la segmentation en VLAN, le routage inter-VLAN, l'attribution automatique d'adresses via DHCP, la résolution de noms avec DNS, et le filtrage du trafic avec des ACL.
 
 ## 2. Contexte de l'entreprise
 
@@ -21,23 +21,24 @@ La question centrale de ce projet est la suivante :
 Pour y répondre, le réseau doit respecter plusieurs contraintes :
 
 - les ordinateurs du service informatique doivent pouvoir communiquer avec le serveur ;
-- les ordinateurs des employés ne doivent pas pouvoir accéder au serveur ;
+- les ordinateurs des employés ne doivent pas pouvoir accéder directement au serveur ;
 - les deux services doivent être séparés dans des réseaux distincts ;
 - le serveur doit être isolé dans un réseau qui lui est propre ;
 - les communications entre les réseaux doivent être contrôlées selon les règles de sécurité définies.
 
 ## 4. Objectifs du projet
 
-Pour répondre à cette problématique, je vais mettre en place les éléments suivants :
+Pour répondre à cette problématique, les éléments suivants ont été mis en place :
 
 - un VLAN dédié au service informatique ;
 - un VLAN dédié aux employés ;
 - un VLAN dédié au serveur ;
 - un routage inter-VLAN pour permettre la communication entre les réseaux autorisés ;
 - un service DHCP pour l'attribution automatique des adresses IP ;
+- un service DNS pour la résolution des noms ;
 - une ACL pour restreindre l'accès au serveur.
 
-Une fois la configuration terminée, plusieurs tests de connectivité viennent vérifier que le réseau fonctionne comme prévu et que les règles de sécurité sont respectées.
+Plusieurs tests de connectivité et de sécurité permettent de vérifier que le réseau fonctionne comme prévu.
 
 ## 5. Topologie du réseau
 
@@ -76,6 +77,11 @@ Le serveur conserve une adresse IP fixe : **192.168.30.10**.
 
 ## 9. Résultat de sécurité
 
-L'ACL `ACL-SERVEUR` permet au **VLAN 10 – INFORMATIQUE** d'accéder à `192.168.30.10`, tout en bloquant l'accès au serveur depuis le **VLAN 20 – EMPLOYES**.
+L'ACL `ACL-SERVEUR` permet au **VLAN 10 – INFORMATIQUE** d'accéder à `192.168.30.10`, tout en bloquant l'accès direct au serveur depuis le **VLAN 20 – EMPLOYES**.
 
-Les tests réalisés dans Cisco Packet Tracer confirment le fonctionnement de cette politique de sécurité.
+Le VLAN 20 peut néanmoins interroger le service DNS hébergé sur `192.168.30.10`, ce qui permet aux postes employés de résoudre `srv01.techlocal.local` sans leur donner un accès direct au serveur.
+
+Les tests réalisés dans Cisco Packet Tracer confirment le fonctionnement de cette politique :
+
+- **PC0 – VLAN 20** : résolution DNS réussie, mais ping du serveur bloqué ;
+- **PC4 – VLAN 10** : résolution DNS et accès au serveur réussis.
